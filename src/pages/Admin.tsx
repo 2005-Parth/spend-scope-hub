@@ -5,9 +5,9 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { StatusBadge } from "@/components/StatusBadge";
+import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
-import { UserPlus, DollarSign, Users as UsersIcon, TrendingUp } from "lucide-react";
+import { UserPlus, Users as UsersIcon, Settings, Shield } from "lucide-react";
 
 interface User {
   id: string;
@@ -15,16 +15,16 @@ interface User {
   email: string;
   department: string;
   role: string;
+  password?: string;
 }
 
-interface AllExpense {
+interface ApprovalAssignment {
   id: string;
+  employeeId: string;
   employeeName: string;
-  department: string;
-  amount: string;
-  purpose: string;
-  date: string;
-  status: "pending" | "approved" | "reimbursed" | "rejected";
+  approvers: string[];
+  sequence: number;
+  managerIsApprover: boolean;
 }
 
 const Admin = () => {
@@ -32,35 +32,25 @@ const Admin = () => {
     { id: "1", name: "Sarah Johnson", email: "sarah.j@company.com", department: "Marketing", role: "Employee" },
     { id: "2", name: "Michael Chen", email: "michael.c@company.com", department: "Sales", role: "Employee" },
     { id: "3", name: "Emma Davis", email: "emma.d@company.com", department: "IT", role: "Manager" },
+    { id: "4", name: "John Smith", email: "john.s@company.com", department: "Finance", role: "Approver" },
   ]);
 
-  const [allExpenses] = useState<AllExpense[]>([
+  const [approvalAssignments, setApprovalAssignments] = useState<ApprovalAssignment[]>([
     {
       id: "1",
+      employeeId: "1",
       employeeName: "Sarah Johnson",
-      department: "Marketing",
-      amount: "$320.00",
-      purpose: "Marketing materials",
-      date: "2025-03-18",
-      status: "pending",
+      approvers: ["Emma Davis", "John Smith"],
+      sequence: 1,
+      managerIsApprover: true,
     },
     {
       id: "2",
+      employeeId: "2",
       employeeName: "Michael Chen",
-      department: "Sales",
-      amount: "$150.00",
-      purpose: "Client dinner",
-      date: "2025-03-17",
-      status: "approved",
-    },
-    {
-      id: "3",
-      employeeName: "Emma Davis",
-      department: "IT",
-      amount: "$540.00",
-      purpose: "Software license",
-      date: "2025-03-16",
-      status: "reimbursed",
+      approvers: ["John Smith"],
+      sequence: 1,
+      managerIsApprover: false,
     },
   ]);
 
@@ -69,12 +59,18 @@ const Admin = () => {
     email: "",
     department: "",
     role: "Employee",
+    password: "",
+  });
+
+  const [approvalSettings, setApprovalSettings] = useState({
+    multiApproverRequired: false,
+    minApprovalPercentage: 50,
   });
 
   const handleAddUser = (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!newUser.name || !newUser.email || !newUser.department) {
+    if (!newUser.name || !newUser.email || !newUser.department || !newUser.password) {
       toast.error("Please fill in all fields");
       return;
     }
@@ -85,19 +81,19 @@ const Admin = () => {
     };
 
     setUsers([...users, user]);
-    setNewUser({ name: "", email: "", department: "", role: "Employee" });
-    toast.success("User added successfully");
+    setNewUser({ name: "", email: "", department: "", role: "Employee", password: "" });
+    toast.success(`User created successfully. Password: ${user.password}`);
   };
 
-  const totalExpenses = allExpenses.length;
-  const totalAmount = allExpenses.reduce((sum, exp) => sum + parseFloat(exp.amount.replace("$", "")), 0);
-  const pendingCount = allExpenses.filter((e) => e.status === "pending").length;
+  const employeeCount = users.filter(u => u.role === "Employee").length;
+  const managerCount = users.filter(u => u.role === "Manager").length;
+  const approverCount = users.filter(u => u.role === "Approver").length;
 
   return (
     <div className="container mx-auto px-6 py-8">
       <div className="mb-8">
         <h1 className="text-3xl font-bold mb-2">Admin Portal</h1>
-        <p className="text-muted-foreground">Manage users and oversee all expense activities</p>
+        <p className="text-muted-foreground">Manage users and configure approval workflows</p>
       </div>
 
       <div className="grid gap-6 md:grid-cols-4 mb-6">
@@ -113,31 +109,31 @@ const Admin = () => {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium">Total Expenses</CardTitle>
-            <TrendingUp className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium">Employees</CardTitle>
+            <UsersIcon className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{totalExpenses}</div>
+            <div className="text-2xl font-bold">{employeeCount}</div>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium">Total Amount</CardTitle>
-            <DollarSign className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium">Managers</CardTitle>
+            <Shield className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">${totalAmount.toFixed(2)}</div>
+            <div className="text-2xl font-bold">{managerCount}</div>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium">Pending</CardTitle>
-            <TrendingUp className="h-4 w-4 text-pending" />
+            <CardTitle className="text-sm font-medium">Approvers</CardTitle>
+            <Shield className="h-4 w-4 text-success" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{pendingCount}</div>
+            <div className="text-2xl font-bold">{approverCount}</div>
           </CardContent>
         </Card>
       </div>
@@ -146,7 +142,7 @@ const Admin = () => {
         <Card>
           <CardHeader>
             <CardTitle>Add New User</CardTitle>
-            <CardDescription>Create a new user account</CardDescription>
+            <CardDescription>Create a new user account with credentials</CardDescription>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleAddUser} className="space-y-4">
@@ -174,6 +170,18 @@ const Admin = () => {
               </div>
 
               <div className="space-y-2">
+                <Label htmlFor="password">Password</Label>
+                <Input
+                  id="password"
+                  type="password"
+                  placeholder="Set user password"
+                  value={newUser.password}
+                  onChange={(e) => setNewUser({ ...newUser, password: e.target.value })}
+                  required
+                />
+              </div>
+
+              <div className="space-y-2">
                 <Label htmlFor="department">Department</Label>
                 <Input
                   id="department"
@@ -193,14 +201,14 @@ const Admin = () => {
                   <SelectContent>
                     <SelectItem value="Employee">Employee</SelectItem>
                     <SelectItem value="Manager">Manager</SelectItem>
-                    <SelectItem value="Admin">Admin</SelectItem>
+                    <SelectItem value="Approver">Approver</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
 
               <Button type="submit" className="w-full">
                 <UserPlus className="mr-2 h-4 w-4" />
-                Add User
+                Create User
               </Button>
             </form>
           </CardContent>
@@ -208,8 +216,53 @@ const Admin = () => {
 
         <Card>
           <CardHeader>
+            <CardTitle>Approval Settings</CardTitle>
+            <CardDescription>Configure approval workflow rules</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="multiApprover"
+                checked={approvalSettings.multiApproverRequired}
+                onCheckedChange={(checked) =>
+                  setApprovalSettings({ ...approvalSettings, multiApproverRequired: checked as boolean })
+                }
+              />
+              <Label htmlFor="multiApprover" className="cursor-pointer">
+                Require multiple approvers
+              </Label>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="minPercentage">Minimum Approval Percentage</Label>
+              <div className="flex items-center space-x-2">
+                <Input
+                  id="minPercentage"
+                  type="number"
+                  min="1"
+                  max="100"
+                  value={approvalSettings.minApprovalPercentage}
+                  onChange={(e) =>
+                    setApprovalSettings({ ...approvalSettings, minApprovalPercentage: parseInt(e.target.value) })
+                  }
+                />
+                <span className="text-muted-foreground">%</span>
+              </div>
+            </div>
+
+            <Button className="w-full">
+              <Settings className="mr-2 h-4 w-4" />
+              Save Settings
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+
+      <div className="grid gap-6 lg:grid-cols-2 mb-6">
+        <Card>
+          <CardHeader>
             <CardTitle>User Management</CardTitle>
-            <CardDescription>Current system users</CardDescription>
+            <CardDescription>All system users</CardDescription>
           </CardHeader>
           <CardContent>
             <Table>
@@ -236,42 +289,44 @@ const Admin = () => {
             </Table>
           </CardContent>
         </Card>
-      </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>All Expenses</CardTitle>
-          <CardDescription>Overview of all expense submissions across departments</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Employee</TableHead>
-                <TableHead>Department</TableHead>
-                <TableHead>Date</TableHead>
-                <TableHead>Amount</TableHead>
-                <TableHead>Purpose</TableHead>
-                <TableHead>Status</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {allExpenses.map((expense) => (
-                <TableRow key={expense.id}>
-                  <TableCell className="font-medium">{expense.employeeName}</TableCell>
-                  <TableCell>{expense.department}</TableCell>
-                  <TableCell>{expense.date}</TableCell>
-                  <TableCell className="font-semibold">{expense.amount}</TableCell>
-                  <TableCell>{expense.purpose}</TableCell>
-                  <TableCell>
-                    <StatusBadge status={expense.status} />
-                  </TableCell>
+        <Card>
+          <CardHeader>
+            <CardTitle>Approval Assignments</CardTitle>
+            <CardDescription>Configure who approves employee expenses</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Employee</TableHead>
+                  <TableHead>Approvers</TableHead>
+                  <TableHead>Sequence</TableHead>
+                  <TableHead>Manager</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
+              </TableHeader>
+              <TableBody>
+                {approvalAssignments.map((assignment) => (
+                  <TableRow key={assignment.id}>
+                    <TableCell className="font-medium">{assignment.employeeName}</TableCell>
+                    <TableCell>
+                      <div className="text-sm">{assignment.approvers.join(", ")}</div>
+                    </TableCell>
+                    <TableCell>{assignment.sequence}</TableCell>
+                    <TableCell>
+                      {assignment.managerIsApprover ? (
+                        <span className="text-success">Yes</span>
+                      ) : (
+                        <span className="text-muted-foreground">No</span>
+                      )}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 };
